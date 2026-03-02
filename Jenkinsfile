@@ -46,7 +46,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: env.AWS_CREDS_ID
+                    credentialsId: 'aws-creds'
                 ]]) {
                     script {
                         sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
