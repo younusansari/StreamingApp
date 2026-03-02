@@ -1,56 +1,77 @@
 pipeline {
-    agent any
-
+    agent {
+        docker {
+            image 'docker:dind'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -u root:root'
+        }
+    }
     environment {
-        // adjust these to your account/region or parameterise them
-        AWS_REGION      = 'us-west-1'
-        AWS_ACCOUNT_ID  = '975050024946'               // your account
-        ECR_REGISTRY    = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        ECR_REPO = 'yunus/streamingapp'
-        IMAGE_TAG = "v1.0.${env.BUILD_ID}"  
-        // service names must match what docker-compose produces
-        BACKEND_IMAGE   = "adminService"               // example
-        AUTH_IMAGE      = "authService"
-        CHAT_IMAGE      = "chatService"
-        STREAM_IMAGE    = "streamingService"
-        FRONTEND_IMAGE  = "frontend"
+        AWS_REGION = 'us-west-1'
+        ECR_REGISTRY = '975050024946.dkr.ecr.us-west-1.amazonaws.com'
+        ECR_REPO = 'yunus/streamingapp'      
+        IMAGE_TAG = "v1.0.${env.BUILD_ID}"
+        AWS_CREDS_ID = 'aws-credentials'
     }
-
-    triggers {
-        githubPush()
-    }
-
+    
     stages {
-        stage('Build') {
+        stage('Install Prerequisites') {
             steps {
-                echo 'Building Docker images…'
-                sh 'docker-compose build'
+                sh 'apk add --no-cache aws-cli git'
             }
         }
-
-        stage('Login to ECR') {
-            steps {
-                // plugin handles authentication, no aws CLI required
-                ecrLogin awsCredentialsId: 'aws-creds', region: "${AWS_REGION}"
-            }
-        }
-        stage('Push All Services to ECR') {
+        
+        stage('Build All Services') {
             steps {
                 script {
-                    def services = ['auth', 'streaming', 'admin', 'chat', 'frontend']
-                    for (String service : services) {
-                        sh "docker push ${ECR_REGISTRY}/${ECR_REPO}:${service}-${IMAGE_TAG}"
+                    withEnv([
+                        "DOCKER_USER=${ECR_REGISTRY}/${ECR_REPO}",
+                        "TAG=-${IMAGE_TAG}"
+                    ]) {
+                        sh 'docker-compose -f docker-compose.yml build'
                     }
                 }
             }
         }
-
-    }
-
-    post {
-        always {
-            echo 'Cleaning up local images…'
-            sh 'docker system prune -f'
+        
+        stage('Push All Services to ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: env.AWS_CREDS_ID
+                ]]) {
+                    script {
+                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
+                        def services = ['auth', 'streaming', 'admin', 'chat', 'frontend']                        
+                        for (String service : services) {
+                            sh "docker push ${ECR_REGISTRY}/${ECR_REPO}:${service}-${IMAGE_TAG}"
+                        }
+                    }
+                }
+            }
         }
+        
+        // stage('Deploy (Update Kubernetes Manifests)') {
+        //     steps {
+        //         script {
+        //             def services = ['auth', 'streaming', 'admin', 'chat', 'frontend']
+                    
+        //             for (String service : services) {
+        //                 sh "find k8s -name '*.yaml' -type f -exec sed -i \"s|image: .*/${ECR_REPO}:${service}-.*|image: ${ECR_REGISTRY}/${ECR_REPO}:${service}-${IMAGE_TAG}|\" {} +"
+        //             }
+                    
+        //             sh """
+        //             echo "Updating K8s manifests for all services with tag: ${IMAGE_TAG}"
+        //             git config user.name "Vikram Hem Chandar"
+        //             git config user.email "vikramhemchandar@gmail.com"
+                    
+        //             git commit -am 'WIP: update K8s manifests for all services with tag: ${IMAGE_TAG}'
+        //             """
+                    
+        //             withCredentials([gitUsernamePassword(credentialsId: 'github-token', gitToolName: 'Default')]) {
+        //                 sh "git push origin main"
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
