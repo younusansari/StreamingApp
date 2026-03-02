@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: streaming-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      imagePullSecrets:
+        - name: ecr-secret
+      containers:
+        - name: frontend
+          image: 975050024946.dkr.ecr.us-west-1.amazonaws.com/yunus/streamingapp:frontend-v1.0.15
+          ports:
+            - containerPort: 3000

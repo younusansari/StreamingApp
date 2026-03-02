@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streaming-service
+  namespace: streaming-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streaming-service
+  template:
+    metadata:
+      labels:
+        app: streaming-service
+    spec:
+      containers:
+        - name: streaming-service
+          image: yourdockerhub/streaming-service:1.0
+          ports:
+            - containerPort: 3002
+          env:
+            - name: MONGO_URI
+              value: mongodb://mongo:27017/streamingdb
+            - name: NODE_ENV
+              value: production

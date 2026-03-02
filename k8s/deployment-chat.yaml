@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: streaming-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+    spec:
+      containers:
+        - name: chat-service
+          image: yourdockerhub/chat-service:1.0
+          ports:
+            - containerPort: 3004
+          env:
+            - name: MONGO_URI
+              value: mongodb://mongo:27017/streamingdb
+            - name: NODE_ENV
+              value: production
