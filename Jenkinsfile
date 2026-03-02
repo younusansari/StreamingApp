@@ -28,32 +28,18 @@ pipeline {
             }
         }
 
-        // stage('Login to ECR') {
-        //     steps {
-        //         // use the AWS credentials stored in Jenkins
-        //         withCredentials([[
-        //             $class: 'AmazonWebServicesCredentialsBinding',
-        //             credentialsId: 'aws-creds'
-        //         ]]) {
-        //             sh '''
-        //                 aws ecr get-login-password --region $AWS_REGION \
-        //                   | docker login --username AWS --password-stdin $ECR_REGISTRY
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Login to ECR') {
+            steps {
+                // plugin handles authentication, no aws CLI required
+                ecrLogin awsCredentialsId: 'aws-creds', region: "${AWS_REGION}"
+            }
+        }
         stage('Push All Services to ECR') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
-                    script {
-                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
-                        def services = ['auth', 'streaming', 'admin', 'chat', 'frontend']                        
-                        for (String service : services) {
-                            sh "docker push ${ECR_REGISTRY}/${ECR_REPO}:${service}-${IMAGE_TAG}"
-                        }
+                script {
+                    def services = ['auth', 'streaming', 'admin', 'chat', 'frontend']
+                    for (String service : services) {
+                        sh "docker push ${ECR_REGISTRY}/${ECR_REPO}:${service}-${IMAGE_TAG}"
                     }
                 }
             }
