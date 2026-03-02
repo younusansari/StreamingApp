@@ -14,7 +14,7 @@ pipeline {
     }
     
     stages {
-        stage('Install Prerequisites') {
+        stage('Install Prerequisites AWS CLI and Git') {
             steps {
                 sh 'apk add --no-cache aws-cli git'
             }
