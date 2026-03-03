@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: admin-service
-          image: yourdockerhub/admin-service:1.0
+          image: 975050024946.dkr.ecr.us-west-1.amazonaws.com/yunus/streamingapp:admin-v1.0.15
           ports:
             - containerPort: 3003

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: streaming-service
-          image: yourdockerhub/streaming-service:1.0
+          image: 975050024946.dkr.ecr.us-west-1.amazonaws.com/yunus/streamingapp:streaming-v1.0.15
           ports:
             - containerPort: 3002
           env:
